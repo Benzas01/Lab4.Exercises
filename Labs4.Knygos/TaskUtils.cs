@@ -4,6 +4,19 @@ using System.Linq;
 using System.Text;
 public static class TaskUtils
 {
+    /// <summary>
+    /// Finds the longest fragment where the last letter of a word and the first letter of the next word are the sane
+    /// </summary>
+    /// <param name="line">Input line</param>
+    /// <param name="linenumber">Input line number</param>
+    /// <param name="curbestchainl">Currently the best chain</param>
+    /// <param name="linenumbers">Line numbers for the best chain</param>
+    /// <param name="alphabet">Whole alphabet</param>
+    /// <param name="punctuation">All punctuation</param>
+    /// <param name="ischain">bool for if the chain rolls over to next line</param>
+    /// <param name="curchainl">Current chain length</param>
+    /// <param name="Chainfrag">Current chain fragment</param>
+    /// <param name="puncmarks">All punctuation that exists in the current longest chain</param>
     public static void FindLongestFragment(string line, int linenumber, ref int curbestchainl, List<int> linenumbers, string alphabet, string punctuation, ref bool ischain, ref int curchainl, ref string Chainfrag,ref List<char> puncmarks)
     {
         int cursor = 1;
