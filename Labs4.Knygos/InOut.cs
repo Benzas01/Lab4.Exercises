@@ -46,9 +46,9 @@ public static class Inout
                 Writer.WriteLine(bestchain);
                 Writer.WriteLine(curbestchainl);
                 Writer.WriteLine("\n" + "Eiluciu, pro kurias tesiasi ilgiausias fragmentas, skaiciai: ");
-                foreach(int n in Linenumbers)
+                for(int i = 0;i < Linenumbers.Count;i++)
                 {
-                    Writer.WriteLine(Linenumbers[n-1]);
+                    Writer.WriteLine(Linenumbers[i]);
                 }
                 Writer.WriteLine("\n" + "Visi skyrikliai, kurie yra fragmente: ");
                 foreach(char a in Puncmarks)

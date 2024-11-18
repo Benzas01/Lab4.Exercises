@@ -19,26 +19,35 @@ public static class TaskUtils
     /// <param name="puncmarks">All punctuation that exists in the current longest chain</param>
     public static void FindLongestFragment(string line, int linenumber, ref int curbestchainl, List<int> linenumbers, string alphabet, string punctuation, ref bool ischain, ref int curchainl, ref string Chainfrag,ref List<char> puncmarks)
     {
+        //Initial variables
         int cursor = 1;
         string NewLine = " " + line + " ";
         char[] Alphabet = alphabet.ToCharArray();
         char[] Punctuation = punctuation.ToCharArray();
+        //If we are on a new chain, set current chain length to zero
         if (ischain == false)
         {
             curchainl = 0;
         }
+        //I use a while and a cursor to navigate the line itself
         while (cursor < NewLine.Length)
         {
+            //We find the location of the final letter of the first word
             int firstlet = NewLine.IndexOfAny(Punctuation, cursor);
+            //If such a letter is found
             if (firstlet != -1)
             {
+                //We use a variable for punctuation ammounts
                 int puncam = 1;
                 firstlet--;
+                //We have a second letter, which we add to punctuation if it doesnt contain
                 int secondlet = firstlet + 1;
                 if (secondlet < line.Length && puncmarks.Contains(line[secondlet-1]) == false && punctuation.Contains(line[secondlet-1]) == true)
                 {
                     puncmarks.Add(line[secondlet-1]);
                 }
+                //Go through line continuisly, until the line either ends or we find the end of punctation
+                //Continuisly adding new punctuationa
                 while (secondlet < NewLine.Length && punctuation.Contains(NewLine[secondlet]) == true)
                 {
                     if (secondlet < line.Length && puncmarks.Contains(line[secondlet]) == false && punctuation.Contains(line[secondlet]) == true)
@@ -80,7 +89,7 @@ public static class TaskUtils
                         if (ischain == true)
                         {
                             curchainl += 2;
-                            Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, secondlet) - cursor));
+                            Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, firstlet) - cursor));
                             Chainfrag += " ";
                             if (linenumbers.Contains(linenumber) == false)
                             {
@@ -91,7 +100,7 @@ public static class TaskUtils
                         {
                             ischain = true;
                             curchainl += 2;
-                            Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, secondlet)) - cursor);
+                            Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, firstlet)) - cursor);
                             Chainfrag += " ";
                             if (linenumbers.Contains(linenumber) == false)
                             {
@@ -112,6 +121,8 @@ public static class TaskUtils
                         linenumbers.TrimExcess();
                         linenumbers.Add(linenumber);
                     }
+                    Chainfrag = string.Empty;
+                    puncmarks.Clear();
                     curchainl = 0;
                 }
                 else if (secondlet == NewLine.Length - 1)
