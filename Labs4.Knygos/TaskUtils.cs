@@ -42,7 +42,7 @@ public static class TaskUtils
             if (firstlet != -1)
             {
                 //We use a variable for punctuation ammounts
-                int puncam = 1;
+                int puncam = -1;
                 firstlet--;
                 //We have a second letter, which we add to punctuation if it doesnt contain
                 int secondlet = firstlet + 1;
@@ -107,6 +107,7 @@ public static class TaskUtils
                     }
                     Chainfrag = string.Empty;
                     curchainl = 0;
+                    puncam = 0;
                 }
                 //If that was the last word, just set it to the end
                 else if (secondlet == NewLine.Length - 1)
@@ -166,6 +167,7 @@ public static class TaskUtils
             }
             else
             {
+                newline.Append(line.Substring(writepoint));
                 return ischanged;
             }
         }
@@ -278,7 +280,7 @@ public static class TaskUtils
             LineSpacing.Insert(0, 1);
             for (int i = 1; i < indword.Length; i++)
             {
-                LineSpacing.Insert(i, newLine.IndexOf(indword[i]) + 1);
+                LineSpacing.Insert(i, newLine.IndexOf(indword[i]));
             }
         }
         return LineSpacing;
@@ -315,7 +317,7 @@ public static class TaskUtils
             else if (line.IndexOf(Allwords[i]) < secwordstart[i])
             {
                 int index = line.IndexOf(Allwords[i]);
-                int spacesToAdd = (secwordstart[i] - index) + 1;
+                int spacesToAdd = (secwordstart[i] - index);
                 newLine.Append(' ', spacesToAdd);
                 newLine.Append(Allwords[i]);
             }
@@ -327,6 +329,7 @@ public static class TaskUtils
         return newLine.ToString();
 
     }
+
     public static int PuncAms(string line, string punctuation)
     {
         char[] puncs = punctuation.ToCharArray();

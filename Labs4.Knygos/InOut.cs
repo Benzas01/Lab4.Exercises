@@ -24,7 +24,7 @@ public static class Inout
             //Initial variables
             List<char> Puncmarks = new List<char>();
             int numsum = 0, numamount = 0;
-            int linenumber = -1;
+            int linenumber = 0;
             string line, chain = string.Empty;
             int curbestchainl = 0, curchainl = 0;
             bool ischain = false;
@@ -46,14 +46,7 @@ public static class Inout
                 {
                     if (secwordstar[i] < linewordspacings[i])
                     {
-                        if (secwordstar[i - 1] > linewordspacings[i])
-                        {
-                            secwordstar[i] = secwordstar[i - 1] + 15;
-                        }
-                        else
-                        {
                             secwordstar[i] = linewordspacings[i];
-                        }
                     }
                 }
             }
