@@ -5,15 +5,21 @@ using System.Text;
 
 public static class Inout
 {
-    public static string ReadLine()
-    {
-        Console.WriteLine("Input a line: ");
-        return Console.ReadLine();
-    }
+    /// <summary>
+    /// Reading and outputting all required things for the easy version of the task
+    /// </summary>
+    /// <param name="Input">Input file name</param>
+    /// <param name="OutputEasy">Output file name</param>
+    /// <param name="Alphabet">The whole alphabet</param>
+    /// <param name="punctuation">All punctuation</param>
+    /// <param name="numbers">All numbers</param>
+    /// <param name="secwordstar">List for storing starting locations for other words</param>
     public static void ProcessEasy(string Input, string OutputEasy, string Alphabet, string punctuation, string numbers, ref List<int> secwordstar)
     {
+        //Reading function
         using (StreamReader Reader = new StreamReader(Input))
         {
+            //Initial variables
             List<char> Puncmarks = new List<char>();
             int numsum = 0, numamount = 0;
             int linenumber = 0;
@@ -22,12 +28,18 @@ public static class Inout
             bool ischain = false;
             string curchain = string.Empty, bestchain = string.Empty;
             List<int> Linenumbers = new List<int>();
+            //Reading of the file
             while ((line = Reader.ReadLine()) != null)
             {
+                //Adds to linenumber
                 linenumber++;
+                //Finds the longest text fragment
                 TaskUtils.FindLongestFragment(line, linenumber, ref curbestchainl, Linenumbers, Alphabet, punctuation, ref ischain, ref curchainl, ref bestchain,ref Puncmarks);
+                //Finds and adds all the number words
                 TaskUtils.NumberWordsinLine(line, ref numsum, numbers, punctuation, ref numamount);
+                //Gets the spacings of this line
                 List<int> linewordspacings = TaskUtils.Linespacings(line, punctuation);
+                //The loop goes through and checks if they're bigger
                 for (int i = 1; i < linewordspacings.Count; i++)
                 {
                     if (secwordstar[i] < linewordspacings[i])
@@ -36,25 +48,31 @@ public static class Inout
                     }
                 }
             }
+            //Checking for chain length after exit
             if (curchainl > curbestchainl)
             {
                 curbestchainl = curchainl;
             }
+            //Writing to Rodikliai.txt
             using (StreamWriter Writer = new StreamWriter(OutputEasy))
             {
+                //Chain fragments
                 Writer.WriteLine("Ilgiausias teksto fragmentas ir jo ilgis: ");
                 Writer.WriteLine(bestchain);
                 Writer.WriteLine(curbestchainl);
+                //Lines for longest fragment
                 Writer.WriteLine("\n" + "Eiluciu, pro kurias tesiasi ilgiausias fragmentas, skaiciai: ");
                 for(int i = 0;i < Linenumbers.Count;i++)
                 {
                     Writer.WriteLine(Linenumbers[i]);
                 }
+                //All punctuation that exists
                 Writer.WriteLine("\n" + "Visi skyrikliai, kurie yra fragmente: ");
                 foreach(char a in Puncmarks)
                 {
                     Writer.WriteLine("'" + a + "'");
                 }
+                //Number word info
                 Writer.WriteLine("\n" + "Zodziu sudarytu is numeriu skaicius ir suma: ");
                 Writer.WriteLine(numsum);
                 Writer.WriteLine(numamount);
@@ -63,8 +81,18 @@ public static class Inout
         }
 
     }
+    /// <summary>
+    /// Reading and outputting required things for harder version of task
+    /// </summary>
+    /// <param name="Input">Input file name</param>
+    /// <param name="OutputHard">Output file name</param>
+    /// <param name="Alphabet">All alphabet characters</param>
+    /// <param name="numbers">All numbers</param>
+    /// <param name="punctuation">All punctuation</param>
+    /// <param name="secwordstar">List for storing positions of words</param>
     public static void ProcessHard(string Input, string OutputHard, string Alphabet, string numbers, string punctuation, List<int> secwordstar)
     {
+        //Readign and writing at same time
         using (StreamReader Reader = new StreamReader(Input))
         using (StreamWriter Writer = new StreamWriter(OutputHard))
         {
@@ -72,9 +100,12 @@ public static class Inout
             StringBuilder newLine = new StringBuilder();
             while ((line = Reader.ReadLine()) != null)
             {
+                //We remove identical punctuation
                 TaskUtils.RemoveSamePunctuation(line, punctuation, out newLine);
                 string line2 = newLine.ToString();
+                //Add the required spacing
                 string Printline = TaskUtils.SpacingLine(line2, punctuation, secwordstar);
+                //And print it
                 Writer.WriteLine(Printline);
             }
 
