@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 public static class Inout
 {
@@ -22,8 +24,8 @@ public static class Inout
             //Initial variables
             List<char> Puncmarks = new List<char>();
             int numsum = 0, numamount = 0;
-            int linenumber = 0;
-            string line;
+            int linenumber = -1;
+            string line, chain = string.Empty;
             int curbestchainl = 0, curchainl = 0;
             bool ischain = false;
             string curchain = string.Empty, bestchain = string.Empty;
@@ -34,7 +36,7 @@ public static class Inout
                 //Adds to linenumber
                 linenumber++;
                 //Finds the longest text fragment
-                TaskUtils.FindLongestFragment(line, linenumber, ref curbestchainl, Linenumbers, Alphabet, punctuation, ref ischain, ref curchainl, ref bestchain,ref Puncmarks);
+                TaskUtils.FindLongestFragment(line, linenumber, ref curbestchainl, Linenumbers, Alphabet, punctuation, ref ischain, ref curchainl, ref chain,ref Puncmarks,ref bestchain);
                 //Finds and adds all the number words
                 TaskUtils.NumberWordsinLine(line, ref numsum, numbers, punctuation, ref numamount);
                 //Gets the spacings of this line
@@ -44,7 +46,14 @@ public static class Inout
                 {
                     if (secwordstar[i] < linewordspacings[i])
                     {
-                        secwordstar[i] = linewordspacings[i];
+                        if (secwordstar[i - 1] > linewordspacings[i])
+                        {
+                            secwordstar[i] = secwordstar[i - 1] + 15;
+                        }
+                        else
+                        {
+                            secwordstar[i] = linewordspacings[i];
+                        }
                     }
                 }
             }
@@ -52,7 +61,9 @@ public static class Inout
             if (curchainl > curbestchainl)
             {
                 curbestchainl = curchainl;
+                bestchain = chain;
             }
+            int Puncamount = TaskUtils.PuncAms(bestchain, punctuation);
             //Writing to Rodikliai.txt
             using (StreamWriter Writer = new StreamWriter(OutputEasy))
             {
@@ -61,19 +72,16 @@ public static class Inout
                 Writer.WriteLine(bestchain);
                 Writer.WriteLine(curbestchainl);
                 //Lines for longest fragment
-                Writer.WriteLine("\n" + "Eiluciu, pro kurias tesiasi ilgiausias fragmentas, skaiciai: ");
-                for(int i = 0;i < Linenumbers.Count;i++)
-                {
-                    Writer.WriteLine(Linenumbers[i]);
-                }
+                Writer.WriteLine("\n" + "Skyrikliu fragmente skaicius: ");
+                Writer.WriteLine(Puncamount);
                 //All punctuation that exists
-                Writer.WriteLine("\n" + "Visi skyrikliai, kurie yra fragmente: ");
-                foreach(char a in Puncmarks)
+                Writer.WriteLine("\n" + "Eilutes numeriai: ");
+                foreach(int a in Linenumbers)
                 {
-                    Writer.WriteLine("'" + a + "'");
+                    Writer.Write(a + " ");
                 }
                 //Number word info
-                Writer.WriteLine("\n" + "Zodziu sudarytu is numeriu skaicius ir suma: ");
+                Writer.WriteLine("\n" + "\n" + "Zodziu sudarytu is numeriu skaicius ir suma: ");
                 Writer.WriteLine(numsum);
                 Writer.WriteLine(numamount);
                 Writer.Close();
@@ -96,13 +104,19 @@ public static class Inout
         using (StreamReader Reader = new StreamReader(Input))
         using (StreamWriter Writer = new StreamWriter(OutputHard))
         {
-            string line;
+            string line, line2;
             StringBuilder newLine = new StringBuilder();
             while ((line = Reader.ReadLine()) != null)
             {
                 //We remove identical punctuation
-                TaskUtils.RemoveSamePunctuation(line, punctuation, out newLine);
-                string line2 = newLine.ToString();
+                if (TaskUtils.RemoveSamePunctuation(line, punctuation, out newLine) == false)
+                {
+                    line2 = line;
+                }
+                else
+                {
+                    line2 = newLine.ToString();
+                }
                 //Add the required spacing
                 string Printline = TaskUtils.SpacingLine(line2, punctuation, secwordstar);
                 //And print it

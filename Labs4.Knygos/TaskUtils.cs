@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Expando;
 using System.Text;
+using System.Text.RegularExpressions;
 public static class TaskUtils
 {
     /// <summary>
@@ -18,7 +21,7 @@ public static class TaskUtils
     /// <param name="curchainl">Current chain length</param>
     /// <param name="Chainfrag">Current chain fragment</param>
     /// <param name="puncmarks">All punctuation that exists in the current longest chain</param>
-    public static void FindLongestFragment(string line, int linenumber, ref int curbestchainl, List<int> linenumbers, string alphabet, string punctuation, ref bool ischain, ref int curchainl, ref string Chainfrag,ref List<char> puncmarks)
+    public static void FindLongestFragment(string line, int linenumber, ref int curbestchainl, List<int> linenumbers, string alphabet, string punctuation, ref bool ischain, ref int curchainl, ref string Chainfrag, ref List<char> puncmarks, ref string bestchain)
     {
         //Initial variables
         int cursor = 1;
@@ -43,9 +46,9 @@ public static class TaskUtils
                 firstlet--;
                 //We have a second letter, which we add to punctuation if it doesnt contain
                 int secondlet = firstlet + 1;
-                if (secondlet < line.Length && puncmarks.Contains(line[secondlet-1]) == false && punctuation.Contains(line[secondlet-1]) == true)
+                if (secondlet < line.Length && puncmarks.Contains(line[secondlet - 1]) == false && punctuation.Contains(line[secondlet - 1]) == true)
                 {
-                    puncmarks.Add(line[secondlet-1]);
+                    puncmarks.Add(line[secondlet - 1]);
                 }
                 //Go through line continuisly, until the line either ends or we find the end of punctation
                 //Continuisly adding new punctuationa
@@ -57,62 +60,34 @@ public static class TaskUtils
                     }
                     secondlet++;
                     puncam++;
-                   
+
                 }
                 //Checking if last letter in word equals first letter in other word
                 if (secondlet < NewLine.Length && char.ToLower(NewLine[firstlet]) == char.ToLower(NewLine[secondlet]))
                 {
                     //If new chain, add only one word to count at all
-                    if (Chainfrag.Length == 0)
+                    //Adds double
+                    if (ischain == true)
                     {
-                        if (ischain == true)
+                        curchainl += 2;
+                        Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, secondlet) - cursor));
+                        Chainfrag += " ";
+                        if (linenumbers.Contains(linenumber) == false)
                         {
-                            curchainl++;
-                            Chainfrag += NewLine.Substring(cursor, firstlet - cursor);
-                            Chainfrag += " ";
-                            if(linenumbers.Contains(linenumber) == false)
-                            {
-                                linenumbers.Add(linenumber);
-                            }
-                        }
-                        else
-                        {
-                            ischain = true;
-                            curchainl++;
-                            Chainfrag += NewLine.Substring(cursor, firstlet - cursor);
-                            Chainfrag += " ";
-                            if (linenumbers.Contains(linenumber) == false)
-                            {
-                                linenumbers.Add(linenumber);
-                            }
+                            linenumbers.Add(linenumber);
                         }
                     }
                     else
                     {
-                        //Adds double
-                        if (ischain == true)
+                        ischain = true;
+                        curchainl += 2;
+                        Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, secondlet)) - cursor);
+                        Chainfrag += " ";
+                        if (linenumbers.Contains(linenumber) == false)
                         {
-                            curchainl ++;
-                            Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, firstlet) - cursor));
-                            Chainfrag += " ";
-                            if (linenumbers.Contains(linenumber) == false)
-                            {
-                                linenumbers.Add(linenumber);
-                            }
-                        }
-                        else
-                        {
-                            ischain = true;
-                            curchainl ++;
-                            Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, firstlet)) - cursor);
-                            Chainfrag += " ";
-                            if (linenumbers.Contains(linenumber) == false)
-                            {
-                                linenumbers.Add(linenumber);
-                            }
+                            linenumbers.Add(linenumber);
                         }
                     }
-
 
                 }
                 //This is for chain breaking
@@ -127,9 +102,10 @@ public static class TaskUtils
                         linenumbers.Clear();
                         linenumbers.TrimExcess();
                         linenumbers.Add(linenumber);
+                        bestchain = Chainfrag;
+
                     }
                     Chainfrag = string.Empty;
-                    puncmarks.Clear();
                     curchainl = 0;
                 }
                 //If that was the last word, just set it to the end
@@ -190,8 +166,6 @@ public static class TaskUtils
             }
             else
             {
-                //If no punctuation found, add whole line and finish function
-                newline.Append(line.Substring(writepoint));
                 return ischanged;
             }
         }
@@ -208,51 +182,61 @@ public static class TaskUtils
     /// <returns></returns>
     public static bool NumberWordsinLine(string line, ref int numsum, string numbers, string punctuation, ref int numamount)
     {
-        //Initial variables
+        // Add padding to handle edge cases
         line = " " + line + "  ";
         char[] num = numbers.ToCharArray();
         int cursor = 0;
         bool contains = false;
+
         while (cursor < line.Length)
         {
-            //Using same cursor method again
-            //We find the first location of a number
+            // Find the first occurrence of any number starting from the cursor
             int firstnumloc = line.IndexOfAny(num, cursor);
             if (firstnumloc == -1)
             {
-                //if there are no numbers, we just return false
+                // No more numbers found; return
                 return contains;
             }
-            else if (punctuation.Contains(line[firstnumloc - 1]) == false)
+
+            // Check if the number is part of a word; if so, skip it
+            if (firstnumloc == 0 || !punctuation.Contains(line[firstnumloc - 1]))
             {
-                //if the number is a part of a word, we just ignore it
                 cursor = firstnumloc + 1;
+                continue;
+            }
+
+            // Find the last contiguous numeric character
+            int lastnumloc = firstnumloc;
+            while (lastnumloc < line.Length && numbers.Contains(line[lastnumloc]))
+            {
+                lastnumloc++;
+            }
+
+            // Check if the character after the number sequence is punctuation
+            if (lastnumloc < line.Length && punctuation.Contains(line[lastnumloc]))
+            {
+                contains = true;
+
+                // Extract the number word
+                string numword = line.Substring(firstnumloc, lastnumloc - firstnumloc);
+
+                // Update sum and number word count
+                numsum += TaskUtils.NumberWordSum(numword);
+                numamount++;
+
+                // Move the cursor past the number word
+                cursor = lastnumloc;
             }
             else
             {
-                //We start of by finding the final number element
-                //By using a while loop
-                int lastnumloc = firstnumloc;
-                while (numbers.Contains(line[lastnumloc]) == true)
-                {
-                    lastnumloc++;
-                }
-                //If the character after the final number is punctuation, we can say that that is a number word
-                if (punctuation.Contains(line[lastnumloc + 1]) == true)
-                {
-                    contains = true;
-                    //We make a string of the word
-                    string numword = line.Substring(firstnumloc, lastnumloc - firstnumloc);
-                    //Give it to a function to calculate the sum and add it to program wide sum
-                    numsum += TaskUtils.NumberWordSum(numword);
-                    cursor = lastnumloc + 1;
-                    //Add 1 to number word amount
-                    numamount++;
-                }
+                // If no punctuation follows, skip to the end of the current sequence
+                cursor = lastnumloc;
             }
         }
+
         return contains;
     }
+
     /// <summary>
     /// Gets the sum of a numberword
     /// </summary>
@@ -276,21 +260,26 @@ public static class TaskUtils
     /// <returns></returns>
     public static List<int> Linespacings(string line, string punctuation)
     {
-        //we make an empty list up to 80 word capacity
-        List<int> LineSpacing = new List<int>();
-        EmptyList(ref LineSpacing);
         StringBuilder stringBuilder = new StringBuilder();
-        //We remove same punctuation, as this is for hard output, so we dont need extra punctuation (hehe)
+        string newLine;
         RemoveSamePunctuation(line, punctuation, out stringBuilder);
-        string newLine = stringBuilder.ToString();
-        //We split the line into words, presuming that all words have atleast 1 space
-        string[] indword = newLine.Split(' ');
-        //set first element to 1, as that is specified in instructions
-        LineSpacing[0] = 1;
-        for (int i = 1; i < indword.Length; i++)
+        if (RemoveSamePunctuation(line, punctuation, out stringBuilder) == false)
         {
-            //We caluclate the linespacing, using indexof
-            LineSpacing[i] = newLine.IndexOf(indword[i]);
+            newLine = line;
+        }
+        else
+        {
+            newLine = stringBuilder.ToString();
+        }
+        string[] indword = newLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        List<int> LineSpacing = new List<int>(indword.Length);
+        if (indword.Length > 0)
+        {
+            LineSpacing.Insert(0, 1);
+            for (int i = 1; i < indword.Length; i++)
+            {
+                LineSpacing.Insert(i, newLine.IndexOf(indword[i]) + 1);
+            }
         }
         return LineSpacing;
     }
@@ -301,7 +290,7 @@ public static class TaskUtils
     public static void EmptyList(ref List<int> list)
     {
         //Takes a list and expands its capacity to 80 and fills it with -1
-        for (int i = 0; i < 80; i++)
+        for (int i = 0; i < 40; i++)
         {
             list.Insert(i, -1);
         }
@@ -316,21 +305,18 @@ public static class TaskUtils
     public static string SpacingLine(string line, string punctuation, List<int> secwordstart)
     {
         StringBuilder newLine = new StringBuilder();
-        //We again split the words by space
         string[] Allwords = line.Split(' ');
         for (int i = 0; i < Allwords.Length; i++)
         {
-
             if (i == 0)
             {
                 newLine.Append(" " + Allwords[i] + " ");
             }
             else if (line.IndexOf(Allwords[i]) < secwordstart[i])
             {
-                //Calculates spaces to add and adds them
                 int index = line.IndexOf(Allwords[i]);
-                int spacesToAdd = secwordstart[i] - index;
-                newLine.Append(' ', spacesToAdd); 
+                int spacesToAdd = (secwordstart[i] - index) + 1;
+                newLine.Append(' ', spacesToAdd);
                 newLine.Append(Allwords[i]);
             }
             else if (i != 0)
@@ -340,5 +326,18 @@ public static class TaskUtils
         }
         return newLine.ToString();
 
+    }
+    public static int PuncAms(string line, string punctuation)
+    {
+        char[] puncs = punctuation.ToCharArray();
+        int puncamount = 0;
+        for (int i = 0; i < line.Length-1; i++)
+        {
+            if (punctuation.Contains(line[i]) == true) 
+            {
+                puncamount++;
+            }
+        }
+        return puncamount;
     }
 }
