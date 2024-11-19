@@ -18,11 +18,14 @@ namespace Labs4.Knygos
             File.Delete(OutputEasy);
             //Creates and allocates space for empty list
             List<int> sWordStartLoc = new List<int>(80);
+            List<int> SpaceIndexes = new List<int>(80);
             TaskUtils.EmptyList(ref sWordStartLoc);
+            TaskUtils.EmptyList(ref SpaceIndexes);
             sWordStartLoc[0] = 1;
             //Input and output for both versions of the task at hand
-            Inout.ProcessEasy(Input, OutputEasy, Alphabet, Punctuation, Numbers, ref sWordStartLoc);
-            Inout.ProcessHard(Input, OutputHard, Alphabet, Numbers, Punctuation, sWordStartLoc);
+            Inout.ProcessEasy(Input, OutputEasy, Alphabet, Punctuation, Numbers, ref sWordStartLoc,ref SpaceIndexes);
+            sWordStartLoc[0] = 1;
+            Inout.ProcessHard(Input, OutputHard, Alphabet, Numbers, Punctuation, sWordStartLoc,SpaceIndexes);
         }
     }
 }

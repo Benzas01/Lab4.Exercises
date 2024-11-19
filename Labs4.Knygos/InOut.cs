@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -16,7 +17,7 @@ public static class Inout
     /// <param name="punctuation">All punctuation</param>
     /// <param name="numbers">All numbers</param>
     /// <param name="secwordstar">List for storing starting locations for other words</param>
-    public static void ProcessEasy(string Input, string OutputEasy, string Alphabet, string punctuation, string numbers, ref List<int> secwordstar)
+    public static void ProcessEasy(string Input, string OutputEasy, string Alphabet, string punctuation, string numbers, ref List<int> secwordstar,ref List<int> SpaceIndexes)
     {
         //Reading function
         using (StreamReader Reader = new StreamReader(Input))
@@ -30,6 +31,12 @@ public static class Inout
             bool ischain = false;
             string curchain = string.Empty, bestchain = string.Empty;
             List<int> Linenumbers = new List<int>();
+            List<string> StandardWords = new List<string>();
+            for(int i = 0;i <= 40; i++)
+            {
+                StandardWords.Insert(i, "");
+            }
+            List<string> RefWords = new List<string>();
             //Reading of the file
             while ((line = Reader.ReadLine()) != null)
             {
@@ -40,15 +47,28 @@ public static class Inout
                 //Finds and adds all the number words
                 TaskUtils.NumberWordsinLine(line, ref numsum, numbers, punctuation, ref numamount);
                 //Gets the spacings of this line
-                List<int> linewordspacings = TaskUtils.Linespacings(line, punctuation);
+                List<int> linewordspacings = TaskUtils.Linespacings(line, punctuation,ref RefWords);
                 //The loop goes through and checks if they're bigger
+                if (StandardWords[0].Length < RefWords[0].Length)
+                {
+                    SpaceIndexes[0] = RefWords[0].Length;
+                    StandardWords[0] = RefWords[0];
+                }
                 for (int i = 1; i < linewordspacings.Count; i++)
                 {
                     if (secwordstar[i] < linewordspacings[i])
                     {
-                            secwordstar[i] = linewordspacings[i];
+                        secwordstar[i] = linewordspacings[i];
+                        SpaceIndexes[i] = RefWords[i].Length;
+                        StandardWords[i] = RefWords[i];
+                    }
+                    if (secwordstar[i] + StandardWords[i].Length < linewordspacings[i] + RefWords[i].Length)
+                    {
+                        SpaceIndexes[i] = RefWords[i].Length;
                     }
                 }
+
+                RefWords.Clear();
             }
             //Checking for chain length after exit
             if (curchainl > curbestchainl)
@@ -91,7 +111,7 @@ public static class Inout
     /// <param name="numbers">All numbers</param>
     /// <param name="punctuation">All punctuation</param>
     /// <param name="secwordstar">List for storing positions of words</param>
-    public static void ProcessHard(string Input, string OutputHard, string Alphabet, string numbers, string punctuation, List<int> secwordstar)
+    public static void ProcessHard(string Input, string OutputHard, string Alphabet, string numbers, string punctuation, List<int> secwordstar,List<int> SpaceIndexes)
     {
         //Readign and writing at same time
         using (StreamReader Reader = new StreamReader(Input))
@@ -111,7 +131,7 @@ public static class Inout
                     line2 = newLine.ToString();
                 }
                 //Add the required spacing
-                string Printline = TaskUtils.SpacingLine(line2, punctuation, secwordstar);
+                string Printline = TaskUtils.SpacingLine(line2, punctuation, secwordstar,SpaceIndexes);
                 //And print it
                 Writer.WriteLine(Printline);
             }

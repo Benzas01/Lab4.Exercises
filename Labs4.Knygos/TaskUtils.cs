@@ -260,7 +260,7 @@ public static class TaskUtils
     /// <param name="line">line</param>
     /// <param name="punctuation">punctuation</param>
     /// <returns></returns>
-    public static List<int> Linespacings(string line, string punctuation)
+    public static List<int> Linespacings(string line, string punctuation,ref List<string> RefWords)
     {
         StringBuilder stringBuilder = new StringBuilder();
         string newLine;
@@ -278,9 +278,11 @@ public static class TaskUtils
         if (indword.Length > 0)
         {
             LineSpacing.Insert(0, 1);
+            RefWords.Insert(0, indword[0]);
             for (int i = 1; i < indword.Length; i++)
             {
                 LineSpacing.Insert(i, newLine.IndexOf(indword[i]));
+                RefWords.Add(indword[i]);
             }
         }
         return LineSpacing;
@@ -304,7 +306,7 @@ public static class TaskUtils
     /// <param name="punctuation">all punctuation</param>
     /// <param name="secwordstart">the locations to add</param>
     /// <returns></returns>
-    public static string SpacingLine(string line, string punctuation, List<int> secwordstart)
+    public static string SpacingLine(string line, string punctuation, List<int> secwordstart,List<int> SpaceIndexes)
     {
         StringBuilder newLine = new StringBuilder();
         string[] Allwords = line.Split(' ');
