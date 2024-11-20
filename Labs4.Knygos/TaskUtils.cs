@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Expando;
+using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 public static class TaskUtils
@@ -21,101 +22,93 @@ public static class TaskUtils
     /// <param name="curchainl">Current chain length</param>
     /// <param name="Chainfrag">Current chain fragment</param>
     /// <param name="puncmarks">All punctuation that exists in the current longest chain</param>
-    public static void FindLongestFragment(string line, int linenumber, ref int curbestchainl, List<int> linenumbers, string alphabet, string punctuation, ref bool ischain, ref int curchainl, ref string Chainfrag, ref List<char> puncmarks, ref string bestchain)
+    public static void FindLongestFragment(string line, int linenumber, ref int curbestchainl, List<int> linenumbers, string alphabet, string punctuation, ref bool ischain, ref int curchainl, ref string Chainfrag, ref List<char> puncmarks, ref string bestchain,ref char lastletter, ref List<int> currentChainLineNumbers)
     {
-        //Initial variables
-        int cursor = 1;
-        string NewLine = " " + line + " ";
-        char[] Alphabet = alphabet.ToCharArray();
-        char[] Punctuation = punctuation.ToCharArray();
-        //If we are on a new chain, set current chain length to zero
-        if (ischain == false)
+        // Skip empty lines but maintain the chain
+        if (string.IsNullOrWhiteSpace(line))
         {
-            curchainl = 0;
+            return;
         }
-        //I use a while and a cursor to navigate the line itself
-        while (cursor < NewLine.Length)
+
+        // Split by spaces while keeping punctuation
+        string[] words = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var word in words)
         {
-            //We find the location of the final letter of the first word
-            int firstlet = NewLine.IndexOfAny(Punctuation, cursor);
-            //If such a letter is found
-            if (firstlet != -1)
+            // Retain punctuation-only "words" in the chain but do not count them as breaking it
+            if (word.All(ch => punctuation.Contains(ch)))
             {
-                //We use a variable for punctuation ammounts
-                int puncam = -1;
-                firstlet--;
-                //We have a second letter, which we add to punctuation if it doesnt contain
-                int secondlet = firstlet + 1;
-                if (secondlet < line.Length && puncmarks.Contains(line[secondlet - 1]) == false && punctuation.Contains(line[secondlet - 1]) == true)
+                if (ischain)
                 {
-                    puncmarks.Add(line[secondlet - 1]);
-                }
-                //Go through line continuisly, until the line either ends or we find the end of punctation
-                //Continuisly adding new punctuationa
-                while (secondlet < NewLine.Length && punctuation.Contains(NewLine[secondlet]) == true)
-                {
-                    if (secondlet < line.Length && puncmarks.Contains(line[secondlet]) == false && punctuation.Contains(line[secondlet]) == true)
+                    Chainfrag += word + " "; // Include punctuation in the chain
+                    if (!currentChainLineNumbers.Contains(linenumber))
                     {
-                        puncmarks.Add(line[secondlet]);
+                        currentChainLineNumbers.Add(linenumber);
                     }
-                    secondlet++;
-                    puncam++;
+                }
+                continue;
+            }
 
-                }
-                //Checking if last letter in word equals first letter in other word
-                if (secondlet < NewLine.Length && char.ToLower(NewLine[firstlet]) == char.ToLower(NewLine[secondlet]))
+            // Extract the first and last letters
+            char firstLetter = word.FirstOrDefault(ch => char.IsLetter(ch));
+            char lastLetterOfWord = word.LastOrDefault(ch => char.IsLetter(ch));
+
+            // If there's no active chain, start a new one
+            if (!ischain)
+            {
+                ischain = true;
+                curchainl = 1; // Start with one word
+                Chainfrag = word + " "; // Add the first word to the chain
+                lastletter = lastLetterOfWord; // Update the last letter
+                currentChainLineNumbers.Clear();
+                currentChainLineNumbers.Add(linenumber); // Record the line number
+            }
+            else
+            {
+                // Check if the chain can continue
+                if (char.ToLower(lastletter) == char.ToLower(firstLetter))
                 {
-                    //If new chain, add only one word to count at all
-                    //Adds double
-                    if (ischain == true)
+                    curchainl++; // Increment the chain word count
+                    Chainfrag += word + " "; // Append the word to the chain
+
+                    // Add the line number if not already added
+                    if (!currentChainLineNumbers.Contains(linenumber))
                     {
-                        curchainl += 2;
-                        Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, secondlet) - cursor));
-                        Chainfrag += " ";
-                        if (linenumbers.Contains(linenumber) == false)
-                        {
-                            linenumbers.Add(linenumber);
-                        }
-                    }
-                    else
-                    {
-                        ischain = true;
-                        curchainl += 2;
-                        Chainfrag += NewLine.Substring(cursor, (NewLine.IndexOfAny(Punctuation, secondlet)) - cursor);
-                        Chainfrag += " ";
-                        if (linenumbers.Contains(linenumber) == false)
-                        {
-                            linenumbers.Add(linenumber);
-                        }
+                        currentChainLineNumbers.Add(linenumber);
                     }
 
+                    // Update the last letter for the next check
+                    lastletter = lastLetterOfWord;
                 }
-                //This is for chain breaking
-                else if (secondlet < NewLine.Length && char.ToLower(NewLine[firstlet]) != char.ToLower(NewLine[secondlet]))
+                else
                 {
-                    //Overwrites best chain if is best chain
-                    //Sets all variables to zero
-                    ischain = false;
+                    // Chain breaks, check if it's the longest chain so far
                     if (curchainl > curbestchainl)
                     {
-                        curbestchainl = curchainl;
+                        curbestchainl = curchainl; // Update best chain length
+                        bestchain = Chainfrag.Trim(); // Save the best chain
                         linenumbers.Clear();
-                        linenumbers.TrimExcess();
-                        linenumbers.Add(linenumber);
-                        bestchain = Chainfrag;
-
+                        linenumbers.AddRange(currentChainLineNumbers); // Save line numbers
                     }
-                    Chainfrag = string.Empty;
-                    curchainl = 0;
-                    puncam = 0;
+
+                    // Start a new chain
+                    ischain = true;
+                    curchainl = 1;
+                    Chainfrag = word + " ";
+                    lastletter = lastLetterOfWord;
+                    currentChainLineNumbers.Clear();
+                    currentChainLineNumbers.Add(linenumber);
                 }
-                //If that was the last word, just set it to the end
-                else if (secondlet == NewLine.Length - 1)
-                {
-                    cursor = secondlet - 1;
-                }
-                cursor = secondlet;
             }
+        }
+
+        // Finalize the chain after processing all words in the line
+        if (curchainl > curbestchainl)
+        {
+            curbestchainl = curchainl;
+            bestchain = Chainfrag.Trim();
+            linenumbers.Clear();
+            linenumbers.AddRange(currentChainLineNumbers);
         }
     }
     /// <summary>
@@ -189,7 +182,7 @@ public static class TaskUtils
         char[] num = numbers.ToCharArray();
         int cursor = 0;
         bool contains = false;
-
+        bool negative = false;
         while (cursor < line.Length)
         {
             // Find the first occurrence of any number starting from the cursor
@@ -199,11 +192,15 @@ public static class TaskUtils
                 // No more numbers found; return
                 return contains;
             }
-
+            if (line[firstnumloc - 1] == '-')
+            {
+                negative = true;
+            }
             // Check if the number is part of a word; if so, skip it
-            if (firstnumloc == 0 || !punctuation.Contains(line[firstnumloc - 1]))
+            else if (firstnumloc == 0 || !punctuation.Contains(line[firstnumloc - 1]))
             {
                 cursor = firstnumloc + 1;
+                negative = false;
                 continue;
             }
 
@@ -221,11 +218,17 @@ public static class TaskUtils
 
                 // Extract the number word
                 string numword = line.Substring(firstnumloc, lastnumloc - firstnumloc);
-
                 // Update sum and number word count
-                numsum += TaskUtils.NumberWordSum(numword);
+                if (negative == true)
+                {
+                    numsum += Int32.Parse(numword) * -1;
+                }
+                else
+                {
+                    numsum += Int32.Parse(numword);
+                }
                 numamount++;
-
+                negative = false;
                 // Move the cursor past the number word
                 cursor = lastnumloc;
             }
@@ -238,29 +241,13 @@ public static class TaskUtils
 
         return contains;
     }
-
-    /// <summary>
-    /// Gets the sum of a numberword
-    /// </summary>
-    /// <param name="numword">numberword</param>
-    /// <returns>sum of numbers in word</returns>
-    private static int NumberWordSum(string numword)
-    {
-        int sum = 0;
-        //We just go through the whole word and add the number value to a sum, then return it
-        for (int i = 0; i < numword.Length; i++)
-        {
-            sum += Convert.ToInt32(char.GetNumericValue(numword[i]));
-        }
-        return sum;
-    }
     /// <summary>
     /// Finds the maximum line spacings
     /// </summary>
     /// <param name="line">line</param>
     /// <param name="punctuation">punctuation</param>
     /// <returns></returns>
-    public static List<int> Linespacings(string line, string punctuation)
+    public static List<int> Linespacings(string line, string punctuation, ref List<string> RefWords)
     {
         StringBuilder stringBuilder = new StringBuilder();
         string newLine;
@@ -278,9 +265,11 @@ public static class TaskUtils
         if (indword.Length > 0)
         {
             LineSpacing.Insert(0, 1);
+            RefWords.Insert(0, indword[0]);
             for (int i = 1; i < indword.Length; i++)
             {
                 LineSpacing.Insert(i, newLine.IndexOf(indword[i]));
+                RefWords.Add(indword[i]);
             }
         }
         return LineSpacing;
@@ -304,39 +293,58 @@ public static class TaskUtils
     /// <param name="punctuation">all punctuation</param>
     /// <param name="secwordstart">the locations to add</param>
     /// <returns></returns>
-    public static string SpacingLine(string line, string punctuation, List<int> secwordstart)
+    public static string SpacingLine(string line, string punctuation, List<int> secwordstart, List<int> SpaceIndexes)
     {
         StringBuilder newLine = new StringBuilder();
-        string[] Allwords = line.Split(' ');
+        // Corrected Split
+        string[] Allwords = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
         for (int i = 0; i < Allwords.Length; i++)
         {
-            if (i == 0)
+            // Calculate the starting position for this word
+            int startIndex = secwordstart[i];
+
+            // Add spaces for alignment if the current index is less than the required start position
+            if (newLine.Length < startIndex)
             {
-                newLine.Append(" " + Allwords[i] + " ");
-            }
-            else if (line.IndexOf(Allwords[i]) < secwordstart[i])
-            {
-                int index = line.IndexOf(Allwords[i]);
-                int spacesToAdd = (secwordstart[i] - index);
+                int spacesToAdd = startIndex - newLine.Length;
                 newLine.Append(' ', spacesToAdd);
-                newLine.Append(Allwords[i]);
             }
-            else if (i != 0)
+
+            // Add the word itself
+            newLine.Append(Allwords[i]);
+
+            // Add additional spaces if the word is shorter than the longest word at this position
+            int wordLength = Allwords[i].Length;
+            if (i < SpaceIndexes.Count && wordLength < SpaceIndexes[i])
             {
-                newLine.Append(Allwords[i] + " ");
+                int extraSpaces = SpaceIndexes[i] - wordLength;
+                newLine.Append(' ', extraSpaces);
+            }
+
+            // Add a single space for separation, except after the last word
+            if (i < Allwords.Length - 1)
+            {
+                newLine.Append(' ');
             }
         }
-        return newLine.ToString();
 
+        return newLine.ToString();
     }
 
+    /// <summary>
+    /// Finds the punctuation amount in the longest string that we have
+    /// </summary>
+    /// <param name="line">Longest line</param>
+    /// <param name="punctuation">All punctuation</param>
+    /// <returns>Amount of punctuation</returns>
     public static int PuncAms(string line, string punctuation)
     {
         char[] puncs = punctuation.ToCharArray();
         int puncamount = 0;
-        for (int i = 0; i < line.Length-1; i++)
+        for (int i = 0; i < line.Length - 1; i++)
         {
-            if (punctuation.Contains(line[i]) == true) 
+            if (punctuation.Contains(line[i]) == true)
             {
                 puncamount++;
             }

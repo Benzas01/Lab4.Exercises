@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -16,72 +17,70 @@ public static class Inout
     /// <param name="punctuation">All punctuation</param>
     /// <param name="numbers">All numbers</param>
     /// <param name="secwordstar">List for storing starting locations for other words</param>
-    public static void ProcessEasy(string Input, string OutputEasy, string Alphabet, string punctuation, string numbers, ref List<int> secwordstar)
+    public static void ProcessEasy(string Input, string OutputEasy, string Alphabet, string punctuation, string numbers, ref List<int> secwordstar,ref List<int> SpaceIndexes)
     {
-        //Reading function
         using (StreamReader Reader = new StreamReader(Input))
         {
-            //Initial variables
             List<char> Puncmarks = new List<char>();
+            char lastletter = ' ';
             int numsum = 0, numamount = 0;
             int linenumber = 0;
             string line, chain = string.Empty;
             int curbestchainl = 0, curchainl = 0;
             bool ischain = false;
             string curchain = string.Empty, bestchain = string.Empty;
-            List<int> Linenumbers = new List<int>();
-            //Reading of the file
+            List<int> currentChainLineNumbers = new List<int>();
+            List<int> bestChainLineNumbers = new List<int>();
+            List<string> RefWords = new List<string>();
+
             while ((line = Reader.ReadLine()) != null)
             {
-                //Adds to linenumber
                 linenumber++;
-                //Finds the longest text fragment
-                TaskUtils.FindLongestFragment(line, linenumber, ref curbestchainl, Linenumbers, Alphabet, punctuation, ref ischain, ref curchainl, ref chain,ref Puncmarks,ref bestchain);
-                //Finds and adds all the number words
-                TaskUtils.NumberWordsinLine(line, ref numsum, numbers, punctuation, ref numamount);
-                //Gets the spacings of this line
-                List<int> linewordspacings = TaskUtils.Linespacings(line, punctuation);
-                //The loop goes through and checks if they're bigger
-                for (int i = 1; i < linewordspacings.Count; i++)
+
+                if (string.IsNullOrWhiteSpace(line))
                 {
-                    if (secwordstar[i] < linewordspacings[i])
-                    {
-                            secwordstar[i] = linewordspacings[i];
-                    }
+                    continue; // Skip processing for empty lines
                 }
+
+                TaskUtils.FindLongestFragment(line,linenumber,ref curbestchainl,bestChainLineNumbers,Alphabet,punctuation,ref ischain,ref curchainl,ref chain,ref Puncmarks,ref bestchain,ref lastletter,ref currentChainLineNumbers);
+
+                TaskUtils.NumberWordsinLine(line, ref numsum, numbers, punctuation, ref numamount);
+
+                List<int> linewordspacings = TaskUtils.Linespacings(line, punctuation, ref RefWords);
+
+                RefWords.Clear();
             }
-            //Checking for chain length after exit
+
             if (curchainl > curbestchainl)
             {
                 curbestchainl = curchainl;
                 bestchain = chain;
             }
+
             int Puncamount = TaskUtils.PuncAms(bestchain, punctuation);
-            //Writing to Rodikliai.txt
+
             using (StreamWriter Writer = new StreamWriter(OutputEasy))
             {
-                //Chain fragments
                 Writer.WriteLine("Ilgiausias teksto fragmentas ir jo ilgis: ");
                 Writer.WriteLine(bestchain);
                 Writer.WriteLine(curbestchainl);
-                //Lines for longest fragment
-                Writer.WriteLine("\n" + "Skyrikliu fragmente skaicius: ");
+
+                Writer.WriteLine("\nSkyrikliu fragmente skaicius: ");
                 Writer.WriteLine(Puncamount);
-                //All punctuation that exists
-                Writer.WriteLine("\n" + "Eilutes numeriai: ");
-                foreach(int a in Linenumbers)
+
+                Writer.WriteLine("\nEilutes numeriai: ");
+                foreach (int a in bestChainLineNumbers)
                 {
                     Writer.Write(a + " ");
                 }
-                //Number word info
-                Writer.WriteLine("\n" + "\n" + "Zodziu sudarytu is numeriu skaicius ir suma: ");
+
+                Writer.WriteLine("\n\nZodziu sudarytu is numeriu skaicius ir suma: ");
                 Writer.WriteLine(numsum);
                 Writer.WriteLine(numamount);
-                Writer.Close();
             }
         }
-
     }
+
     /// <summary>
     /// Reading and outputting required things for harder version of task
     /// </summary>
@@ -91,7 +90,7 @@ public static class Inout
     /// <param name="numbers">All numbers</param>
     /// <param name="punctuation">All punctuation</param>
     /// <param name="secwordstar">List for storing positions of words</param>
-    public static void ProcessHard(string Input, string OutputHard, string Alphabet, string numbers, string punctuation, List<int> secwordstar)
+    public static void ProcessHard(string Input, string OutputHard, string Alphabet, string numbers, string punctuation, List<int> secwordstar,List<int> SpaceIndexes)
     {
         //Readign and writing at same time
         using (StreamReader Reader = new StreamReader(Input))
@@ -111,7 +110,7 @@ public static class Inout
                     line2 = newLine.ToString();
                 }
                 //Add the required spacing
-                string Printline = TaskUtils.SpacingLine(line2, punctuation, secwordstar);
+                string Printline = TaskUtils.SpacingLine(line2, punctuation, secwordstar,SpaceIndexes);
                 //And print it
                 Writer.WriteLine(Printline);
             }
